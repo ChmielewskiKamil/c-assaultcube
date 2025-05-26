@@ -117,3 +117,24 @@ void process_name_truncate(const char *input, char *output,
   assert(memchr(output, '\0', output_size)); // should be null-terminated
   assert(strlen(output) < output_size); // str length < str length + null term
 }
+
+kern_return_t task_port_find_by_pid(pid_t pid, mach_port_t *out_task_port) {
+  assert(pid > 0);
+  assert(out_task_port != NULL);
+
+  // Initialize to invalid state at the beginning so that the caller does not
+  // get an uninitialized value. This could happen if task_for_pid fails without
+  // modifying the out_task_port.
+  *out_task_port = MACH_PORT_NULL;
+
+  kern_return_t kr;
+
+  kr = task_for_pid(mach_task_self(), pid, out_task_port);
+
+  if (kr != KERN_SUCCESS) {
+    return kr; // Return the specific kernel error code
+  }
+
+  assert(*out_task_port != MACH_PORT_NULL);
+  return KERN_SUCCESS;
+}

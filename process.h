@@ -3,6 +3,7 @@
 
 #include <sys/sysctl.h> // for kinfo_proc struct
 #include <sys/types.h>
+#include <mach/mach.h>
 
 // process_id_find_by_name finds the process id (PID) that matches the provided
 // string. The caller of this function:
@@ -28,5 +29,33 @@ struct kinfo_proc *process_list_get(size_t *process_list_size);
 // searching for a process in a process list, since the names of the processes
 // are truncated to 17 chars (16 + '\0').
 void process_name_truncate(const char *input, char *output, size_t output_size);
+
+/**
+ * @brief Attempts to get the Mach task port for a given process ID (PID).
+ *
+ * This function wraps the macOS `task_for_pid` Mach call. To succeed,
+ * the calling process usually requires appropriate permissions (e.g., running
+ * as root or possessing specific entitlements like `com.apple.security.cs.debugger`).
+ *
+ * @param pid The process ID of the target task. Must be a positive integer.
+ * @param out_task_port Pointer to a mach_port_t variable where the resulting
+ * task port will be stored on success. If the function
+ * does not return KERN_SUCCESS, this will be set to
+ * MACH_PORT_NULL.
+ *
+ * @return KERN_SUCCESS if the task port was successfully obtained.
+ * Otherwise, a Mach kern_return_t error code indicating the failure.
+ * Common error codes include:
+ * - KERN_FAILURE (5): General failure, often due to permissions.
+ * - KERN_INVALID_ARGUMENT (4): Process with the given PID doesn't exist.
+ * The specific error can be converted to a string using mach_error_string().
+ *
+ * @note The caller is responsible for checking the returned kern_return_t.
+ * If KERN_SUCCESS is returned, out_task_port will contain a valid port
+ * that the caller may need to deallocate eventually if it's a send right
+ * that is not automatically managed.
+ * If an error is returned, *out_task_port is set to MACH_PORT_NULL.
+ */
+kern_return_t task_port_find_by_pid(pid_t pid, mach_port_t *out_task_port);
 
 #endif // PROCESS_H

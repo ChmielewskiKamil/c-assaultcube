@@ -58,11 +58,26 @@ int main() {
 
   if (process_id == -1) {
     printf("PID not found for process: %s\n", process_name);
+
     free(process_name);
-    return 0;
+
+    return 1;
   }
 
   printf("PID found: %d\n", process_id);
+
+  mach_port_t assault_cube_port_task;
+  kern_return_t result_code;
+
+  result_code = task_port_find_by_pid(process_id, &assault_cube_port_task);
+  if (result_code != KERN_SUCCESS) {
+    fprintf(stderr, "Failed to get task port: %s (kern_return_t: %d)\n",
+            mach_error_string(result_code), result_code);
+    free(process_name);
+    return 1;
+  } else {
+    printf("Successfully obtained task port: %u\n", assault_cube_port_task);
+  }
 
   free(process_name);
   return 0;
