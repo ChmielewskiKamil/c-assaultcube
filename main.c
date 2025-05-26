@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/sysctl.h>
 
 #include "process.h"
 // assault cube health pointers.
@@ -32,7 +31,7 @@ int main() {
   printf("Give me the process name:\n");
 
   size_t buffer_size = 256;
-  char *process_name = (char *)malloc(buffer_size);
+  char *process_name = malloc(buffer_size);
 
   if (!process_name) {
     perror("Memory allocation failed");
@@ -49,6 +48,8 @@ int main() {
     printf("You've entered: %s\n", process_name);
   } else {
     printf("Input error.\n");
+    free(process_name);
+    return 1;
   }
 
   pid_t process_id;

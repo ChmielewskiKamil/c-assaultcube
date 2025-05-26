@@ -1,6 +1,7 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#include <sys/sysctl.h> // for kinfo_proc struct
 #include <sys/types.h>
 
 // process_id_find_by_name finds the process id (PID) that matches the provided
