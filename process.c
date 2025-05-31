@@ -138,3 +138,43 @@ kern_return_t task_port_find_by_pid(pid_t pid, mach_port_t *out_task_port) {
   assert(*out_task_port != MACH_PORT_NULL);
   return KERN_SUCCESS;
 }
+
+kern_return_t
+task_dyld_info_find_by_task_port(mach_port_t task_port,
+                                 task_dyld_info_data_t *out_task_dyld_info) {
+  assert(task_port > 0);
+  assert(out_task_dyld_info != NULL);
+
+  // Set known default state. Initialize with null bytes.
+  memset(out_task_dyld_info, 0, sizeof(task_dyld_info_data_t));
+
+  assert(out_task_dyld_info->all_image_info_addr == 0);
+  assert(out_task_dyld_info->all_image_info_size == 0);
+
+  kern_return_t kr;
+  mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
+
+  kr = task_info(task_port, TASK_DYLD_INFO, (task_info_t)out_task_dyld_info,
+                 &count);
+
+  if (kr == KERN_SUCCESS) {
+    // 1. The count of elements returned should match what we expected for this
+    // struct.
+    assert(count == TASK_DYLD_INFO_COUNT);
+
+    // 2. The address where the full dyld image info list resides should be
+    // non-NULL.
+    assert(out_task_dyld_info->all_image_info_addr != 0);
+
+    // 3. The size of that dyld image info list structure should be positive.
+    assert(out_task_dyld_info->all_image_info_size > 0);
+
+    // 4. The format should be one of the known 32-bit or 64-bit formats.
+    assert(out_task_dyld_info->all_image_info_format ==
+               TASK_DYLD_ALL_IMAGE_INFO_32 ||
+           out_task_dyld_info->all_image_info_format ==
+               TASK_DYLD_ALL_IMAGE_INFO_64);
+  }
+
+  return kr;
+}

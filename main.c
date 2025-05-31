@@ -27,7 +27,7 @@
 // 4. Read process memory function
 // 5. Write process memory function
 
-int main() {
+int main(void) {
   printf("Give me the process name:\n");
 
   size_t buffer_size = 256;
@@ -63,6 +63,7 @@ int main() {
 
     return 1;
   }
+  free(process_name);
 
   printf("PID found: %d\n", process_id);
 
@@ -73,12 +74,27 @@ int main() {
   if (result_code != KERN_SUCCESS) {
     fprintf(stderr, "Failed to get task port: %s (kern_return_t: %d)\n",
             mach_error_string(result_code), result_code);
-    free(process_name);
     return 1;
   } else {
     printf("Successfully obtained task port: %u\n", assault_cube_port_task);
   }
 
-  free(process_name);
+  task_dyld_info_data_t assault_cube_dyld_info;
+  result_code = task_dyld_info_find_by_task_port(assault_cube_port_task,
+                                                 &assault_cube_dyld_info);
+  if (result_code != KERN_SUCCESS) {
+    fprintf(stderr, "Failed to get dyld info: %s (kern_return_t: %d)\n",
+            mach_error_string(result_code), result_code);
+    return 1;
+  } else {
+    printf("Successfully obtained task_dyld_info_data_t.\n");
+    printf("  all_image_info_addr in target process: 0x%llx\n",
+           (unsigned long long)assault_cube_dyld_info.all_image_info_addr);
+    printf("  all_image_info_size in target process: %llu bytes\n",
+           (unsigned long long)assault_cube_dyld_info.all_image_info_size);
+    printf("  all_image_info_format: %d (1 means 32-bit, 2 means 64-bit)\n",
+           assault_cube_dyld_info.all_image_info_format);
+  }
+
   return 0;
 }

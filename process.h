@@ -1,9 +1,9 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#include <mach/mach.h>
 #include <sys/sysctl.h> // for kinfo_proc struct
 #include <sys/types.h>
-#include <mach/mach.h>
 
 // process_id_find_by_name finds the process id (PID) that matches the provided
 // string. The caller of this function:
@@ -35,7 +35,8 @@ void process_name_truncate(const char *input, char *output, size_t output_size);
  *
  * This function wraps the macOS `task_for_pid` Mach call. To succeed,
  * the calling process usually requires appropriate permissions (e.g., running
- * as root or possessing specific entitlements like `com.apple.security.cs.debugger`).
+ * as root or possessing specific entitlements like
+ * `com.apple.security.cs.debugger`).
  *
  * @param pid The process ID of the target task. Must be a positive integer.
  * @param out_task_port Pointer to a mach_port_t variable where the resulting
@@ -57,5 +58,36 @@ void process_name_truncate(const char *input, char *output, size_t output_size);
  * If an error is returned, *out_task_port is set to MACH_PORT_NULL.
  */
 kern_return_t task_port_find_by_pid(pid_t pid, mach_port_t *out_task_port);
+
+/**
+ * @brief Gets information about all loaded software (like the main program and
+ * libraries) for a target process.
+ *
+ * This function asks the operating system (using a low-level call called
+ * `task_info`) for details about the software components currently loaded into
+ * the memory of the process specified by `target_port`.
+ *
+ * The most important piece of info this function gets is a memory address. This
+ * address, stored in `out_dyld_info->all_image_info_addr`, tells you where to
+ * find a complete list of all loaded items (the game itself, system libraries,
+ * etc.) within the target process's memory.
+ *
+ * @param target_port The special ID (Mach port) for the game/process you're
+ * interested in. You can get the port from task_port_find_by_pid function.
+ * @param out_dyld_info A pointer to a `task_dyld_info_data_t` variable. If this
+ * function succeeds, it will fill your variable with the info.
+ * If it fails, this variable's contents might not be useful (though the
+ * function aims to clear `all_image_info_addr` on failure).
+ *
+ * @return Returns `KERN_SUCCESS` (which is 0) if it worked.
+ * If it didn't work, it returns a different number (an error code from the OS).
+ * You MUST check this return value. If it's not `KERN_SUCCESS`,
+ * then `out_dyld_info` doesn't have the data you need.
+ * You can use `mach_error_string()` with the error code to get a
+ * human-readable error message.
+ */
+kern_return_t
+task_dyld_info_find_by_task_port(mach_port_t task_port,
+                                 task_dyld_info_data_t *out_task_dyld_info);
 
 #endif // PROCESS_H
