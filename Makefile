@@ -6,7 +6,8 @@ CC = clang
 # -Werror            (Treat all warnings as errors, forcing fixes)
 # -g                 (Include debugging information in the executable)
 # -std=c99           (Compile according to the C99 language standard)
-# -fsanitize=address (Enable AddressSanitizer for runtime memory error detection)CFLAGS = -Wall -Wextra -Wpedantic -Werror -g -std=c99 -fsanitize=address
+# -fsanitize=address (Enable AddressSanitizer for runtime memory error detection)
+CFLAGS = -Wall -Wextra -Wpedantic -Werror -g -std=c99 -fsanitize=address
 LDFLAGS = -fsanitize=address
 
 # List all object files
