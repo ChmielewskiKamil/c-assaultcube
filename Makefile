@@ -1,6 +1,6 @@
 CC = clang
-CFLAGS = -Wall -Wextra -g
-LDFLAGS =
+CFLAGS = -Wall -Wextra -Wpedantic -Werror -g -std=c17 -fsanitize=address
+LDFLAGS = -fsanitize=address
 
 # List all object files
 OBJS = main.o process.o
