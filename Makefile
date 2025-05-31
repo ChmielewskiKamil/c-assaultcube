@@ -10,24 +10,30 @@ CC = clang
 CFLAGS = -Wall -Wextra -Wpedantic -Werror -g -std=c99 -fsanitize=address
 LDFLAGS = -fsanitize=address
 
-# List all object files
-OBJS = main.o process.o
+# Source files that are part of the unity build (these are #included in UNITY_FILE)
+# This list is for dependency tracking.
+COMPONENT_SOURCES = main.c process.c
+# Project-specific header files that, if changed, should trigger a rebuild.
+PROJECT_HEADERS = process.h 
+
+# The main C file that #includes the others for the unity build.
+UNITY_FILE = unity_build.c
 
 # Name of the final executable
 TARGET = cheat
 
+# Makefile pls do not look for files with these names :)
+.PHONY: all clean
+
 # Default rule
 all: $(TARGET)
 
-# Link the final executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
-
-# Compile each .c file into an object file
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+# Rule to build the target executable from the unity file.
+# The target depends on the unity file itself, the C files it includes,
+# and any project headers to ensure changes in them trigger a rebuild.
+$(TARGET): $(UNITY_FILE) $(COMPONENT_SOURCES) $(PROJECT_HEADERS)
+	$(CC) $(CFLAGS) -o $@ $(UNITY_FILE) $(LDFLAGS)
 
 # Clean up build artifacts
 clean:
-	rm -f $(OBJS) $(TARGET)
-
+	rm -f $(TARGET) # Only need to remove the final target
