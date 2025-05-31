@@ -22,7 +22,7 @@
 // [[base() + 0x1cc648] + 0x2c8] + 0x6c8
 //
 // 1. Get all running processes and find assault cube.
-// 2. Get access to modify the game (handle?)
+// 2. Get access to modify the game (handle?) -> On MacOS: handle == task port
 // 3. Get module base address (base pointer?)
 // 4. Read process memory function
 // 5. Write process memory function
