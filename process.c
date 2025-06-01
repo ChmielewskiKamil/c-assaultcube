@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -212,4 +213,56 @@ kern_return_t read_target_memory(mach_port_t target_task,
   }
 
   return kr;
+}
+
+kern_return_t resolve_pointer_path(mach_port_t target_task,
+                                   mach_vm_address_t base_address,
+                                   const intptr_t *offsets, int num_offsets,
+                                   mach_vm_address_t *out_final_address) {
+  assert(MACH_PORT_VALID(target_task));
+  assert(base_address != 0);
+  assert(num_offsets > 0);
+  assert(offsets != NULL);
+  assert(out_final_address != NULL);
+
+  *out_final_address = 0; // init to known value
+  mach_vm_address_t current_pointer_address = base_address;
+
+  // num_offsets - 1 is needed since we don't want to read the 'actual' value
+  // at the last address. We just care about the address and let the caller
+  // inspect its value. E.g. if we iterated over num_offsets (without -1) when
+  // looking for player's health, the last dereference would return the health
+  // value as opposed to health address.
+  for (int i = 0; i < num_offsets - 1; i++) {
+    current_pointer_address += offsets[i];
+
+    mach_vm_address_t next_address_buffer = 0;
+    kern_return_t kr = read_target_memory(target_task, current_pointer_address,
+                                          sizeof(mach_vm_address_t),
+                                          &next_address_buffer, NULL);
+    if (kr != KERN_SUCCESS) {
+      fprintf(stderr,
+              "resolve_pointer_path: Failed to read pointer at address 0x%llx "
+              "(offset index %d, dereferencting step %d of %d)\n",
+              (unsigned long long)current_pointer_address, i, i + 1,
+              num_offsets - 1);
+      *out_final_address = 0;
+      return kr;
+    }
+
+    current_pointer_address = next_address_buffer;
+
+    if (current_pointer_address == 0) {
+      fprintf(stderr,
+              "resolve_pointer_path: Encountered NULL pointer in chain at "
+              "offset index %d (address after read: 0x%llx)\n",
+              i, (unsigned long long)current_pointer_address);
+      *out_final_address = 0;
+      return KERN_INVALID_ADDRESS;
+    }
+  }
+
+  *out_final_address = current_pointer_address + offsets[num_offsets - 1];
+
+  return KERN_SUCCESS;
 }

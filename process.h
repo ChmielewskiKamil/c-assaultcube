@@ -112,4 +112,31 @@ kern_return_t read_target_memory(mach_port_t target_task,
                                  void *buffer,
                                  mach_vm_size_t *out_actual_bytes_read);
 
+/**
+ * @brief Resolves a multi-level pointer path starting from a base address.
+ *
+ * This function navigates a chain of pointers by adding offsets and
+ * dereferencing. Each offset in the 'offsets' array (except the very last one)
+ * is added to the current address, and then the value at that new address
+ * (which is expected to be another pointer/address) is read. This new address
+ * becomes the base for the next step. The final offset in the 'offsets' array
+ * is added to the last successfully dereferenced pointer to get the final
+ * target address.
+ *
+ * @param target_task The Mach port of the target process.
+ * @param base_address The initial base address to start from.
+ * @param offsets An array of offsets. All but the last are used for
+ * dereferencing. The last offset is added to the final pointer.
+ * @param num_offsets The total number of offsets in the 'offsets' array. Must
+ * be at least 1. (num_offsets - 1) pointer dereferences will occur.
+ * @param out_final_address Pointer to a mach_vm_address_t where the resulting
+ * final memory address will be stored.
+ * @return KERN_SUCCESS if the entire path was resolved successfully.
+ * Otherwise, a Mach error code (e.g., from reading memory) or KERN_FAILURE.
+ */
+kern_return_t
+resolve_pointer_path(mach_port_t target_task, mach_vm_address_t base_address,
+                     const intptr_t offsets[],
+                     int num_offsets, mach_vm_address_t *out_final_address);
+
 #endif // PROCESS_H

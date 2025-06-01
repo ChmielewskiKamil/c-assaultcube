@@ -7,21 +7,9 @@
 #include "process.h"
 
 // assault cube health pointers.
-// [[base() + 0x1d9ef0]] + 0x418
-// [[base() + 0x1cc658] + 0x3e8] + 0x638
-// [[base() + 0x1cc640] + 0x7d8] + 0x638
-// [[base() + 0x1cc648] + 0x358] + 0x638
-// [[base() + 0x1cc658] + 0x238] + 0x7e8
-// [[base() + 0x1cc640] + 0x628] + 0x7e8
-// [[base() + 0x1cc648] + 0x1a8] + 0x7e8
-// [[base() + 0x1cc658] + 0x478] + 0x5a8
-// [[base() + 0x1cc648] + 0x3e8] + 0x5a8
-// [[base() + 0x1cc658] + 0x2c8] + 0x758
-// [[base() + 0x1cc640] + 0x6b8] + 0x758
-// [[base() + 0x1cc648] + 0x238] + 0x758
-// [[base() + 0x1cc658] + 0x358] + 0x6c8
-// [[base() + 0x1cc640] + 0x748] + 0x6c8
-// [[base() + 0x1cc648] + 0x2c8] + 0x6c8
+// [base() + 0x1CBD38] + 0x100 ❌
+// [base() + 0x1F5288] + 0x100
+// [base() + 0x1D5C48] + 0x100
 //
 // 1. Get all running processes and find assault cube.
 // 2. Get access to modify the game (handle?) -> On MacOS: handle == task port
@@ -119,9 +107,10 @@ int main(void) {
   mach_vm_address_t assault_cube_base_module_address = 0;
   char image_path_buffer[PATH_MAX];
 
-  const char *target_module_name = "AssaultCube";
+  const char *target_module_name = "assaultcube.app/Contents/MacOS/assaultcube";
 
-  for (uint32_t i = 0; i < image_info_array_size; i++) {
+  for (uint32_t i = 0; i < assault_cube_dyld_all_images_info.infoArrayCount;
+       i++) {
     mach_vm_address_t path_address_in_target =
         (mach_vm_address_t)local_image_infos[i].imageFilePath;
 
@@ -141,6 +130,9 @@ int main(void) {
         image_path_buffer, &path_bytes_actually_read);
 
     if (result_code == KERN_SUCCESS && path_bytes_actually_read > 0) {
+      // printf("  Image %u: Path: '%s', Load Address: 0x%llx\n", i,
+      //        image_path_buffer,
+      //        (unsigned long long)local_image_infos[i].imageLoadAddress);
       if (strstr(image_path_buffer, target_module_name) != NULL) {
         assault_cube_base_module_address =
             (mach_vm_address_t)local_image_infos[i].imageLoadAddress;
@@ -165,8 +157,35 @@ int main(void) {
     return 1;
   }
 
-  ArenaRelease(main_arena);
+  mach_vm_address_t health_address = 0;
+  const intptr_t health_offsets[] = {0x1D5C48, 0x100};
+  uint num_offsets = sizeof(health_offsets) / sizeof(health_offsets[0]);
 
-  fprintf(stdout, "Cheat executed successfully, closing.\n");
+  result_code = resolve_pointer_path(
+      assault_cube_task_port, assault_cube_base_module_address, health_offsets,
+      num_offsets, &health_address);
+
+  if (result_code == KERN_SUCCESS) {
+    printf("Resolved final health address: 0x%llx\n",
+           (unsigned long long)health_address);
+
+    int player_health = 0;
+
+    result_code =
+        read_target_memory(assault_cube_task_port, health_address,
+                           sizeof(player_health), &player_health, NULL);
+
+    if (result_code == KERN_SUCCESS) {
+      printf("Current player health: %d\n", player_health);
+    } else {
+      fprintf(stderr, "Failed to read health from resolved address 0x%llx\n",
+              (unsigned long long)health_address);
+    }
+  } else {
+    fprintf(stderr, "Failed to resolve pointer path for health.\n");
+  }
+
+  ArenaRelease(main_arena);
+  fprintf(stdout, "\nCheat process finished, closing.\n");
   return 0;
 }
