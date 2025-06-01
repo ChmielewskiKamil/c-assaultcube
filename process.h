@@ -98,7 +98,7 @@ task_dyld_info_find_by_task_port(mach_port_t task_port,
  * @param target_task The Mach port of the target process.
  * @param address The memory address in the target process to start reading
  * from.
- * @param size The number of bytes to read.
+ * @param size The number of bytes to read. MUST be greater than zero.
  * @param buffer A pointer to a buffer in the current process where the read
  * data will be stored. This buffer must be at least 'size' bytes large.
  * @param out_actual_bytes_read Optional pointer to a mach_vm_size_t variable.
