@@ -12,9 +12,9 @@ LDFLAGS = -fsanitize=address
 
 # Source files that are part of the unity build (these are #included in UNITY_FILE)
 # This list is for dependency tracking.
-COMPONENT_SOURCES = main.c process.c
+COMPONENT_SOURCES = main.c process.c arena.c
 # Project-specific header files that, if changed, should trigger a rebuild.
-PROJECT_HEADERS = process.h 
+PROJECT_HEADERS = process.h arena.h
 
 # The main C file that #includes the others for the unity build.
 UNITY_FILE = unity_build.c

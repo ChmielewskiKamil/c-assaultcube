@@ -1,4 +1,3 @@
-// arena.c
 #include "arena.h"
 #include <assert.h> // For assertions
 #include <stdlib.h> // For malloc, free
@@ -52,7 +51,6 @@ void ArenaRelease(Arena *arena) {
 }
 
 void *ArenaPush(Arena *arena, U64 size) {
-  // Preconditions (NASA Rule #5)
   assert(arena != NULL);
   assert(arena->buffer != NULL);
   assert(size > 0); // Typically, allocating zero bytes has specific meanings or
