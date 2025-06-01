@@ -1,7 +1,9 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#include <mach-o/dyld_images.h>
 #include <mach/mach.h>
+#include <mach/mach_vm.h>
 #include <sys/sysctl.h> // for kinfo_proc struct
 #include <sys/types.h>
 
@@ -89,5 +91,25 @@ kern_return_t task_port_find_by_pid(pid_t pid, mach_port_t *out_task_port);
 kern_return_t
 task_dyld_info_find_by_task_port(mach_port_t task_port,
                                  task_dyld_info_data_t *out_task_dyld_info);
+
+/**
+ * @brief Reads a specified number of bytes from the target process's memory.
+ *
+ * @param target_task The Mach port of the target process.
+ * @param address The memory address in the target process to start reading
+ * from.
+ * @param size The number of bytes to read.
+ * @param buffer A pointer to a buffer in the current process where the read
+ * data will be stored. This buffer must be at least 'size' bytes large.
+ * @param out_actual_bytes_read Optional pointer to a mach_vm_size_t variable.
+ * If not NULL, this will be filled with the number of bytes actually read. It's
+ * good practice to check this.
+ * @return KERN_SUCCESS if the read was successful and the requested number of
+ * bytes were read. Otherwise, a Mach kern_return_t error code.
+ */
+kern_return_t read_target_memory(mach_port_t target_task,
+                                 mach_vm_address_t address, mach_vm_size_t size,
+                                 void *buffer,
+                                 mach_vm_size_t *out_actual_bytes_read);
 
 #endif // PROCESS_H

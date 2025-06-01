@@ -178,3 +178,34 @@ task_dyld_info_find_by_task_port(mach_port_t task_port,
 
   return kr;
 }
+
+kern_return_t read_target_memory(mach_port_t target_task,
+                                 mach_vm_address_t address, mach_vm_size_t size,
+                                 void *buffer,
+                                 mach_vm_size_t *out_actual_bytes_read) {
+
+  assert(MACH_PORT_VALID(target_task));
+  assert(buffer != NULL);
+  assert(size > 0);
+
+  kern_return_t kr;
+  mach_vm_size_t actual_bytes_read = 0;
+
+  kr = mach_vm_read_overwrite(target_task, address, size,
+                              (mach_vm_address_t)buffer, &actual_bytes_read);
+
+  // First check if the OS call succeeded.
+  if (kr != KERN_SUCCESS) {
+    return kr;
+  }
+
+  if (out_actual_bytes_read != NULL) {
+    *out_actual_bytes_read = actual_bytes_read;
+  }
+
+  if (actual_bytes_read != size) {
+    return KERN_FAILURE;
+  }
+
+  return kr;
+}
