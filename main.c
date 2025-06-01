@@ -67,7 +67,6 @@ int main(void) {
 
   printf("PID found: %d\n", process_id);
 
-  mach_port_t assault_cube_port_task;
   mach_port_t assault_cube_task_port;
   kern_return_t result_code;
 
