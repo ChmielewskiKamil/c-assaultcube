@@ -196,6 +196,10 @@ kern_return_t read_target_memory(mach_port_t target_task,
 
   // First check if the OS call succeeded.
   if (kr != KERN_SUCCESS) {
+    if (out_actual_bytes_read != NULL) {
+      *out_actual_bytes_read =
+          0; // Set to 0 on OS error for clarity to the caller.
+    }
     return kr;
   }
 
