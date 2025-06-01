@@ -1,5 +1,7 @@
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <sys/syslimits.h>
 
 #include "arena.h"
 #include "process.h"
@@ -110,6 +112,55 @@ int main(void) {
             "Failed to read dyld image info array from target: %s "
             "(kern_return_t: %d)\n",
             mach_error_string(result_code), result_code);
+    ArenaRelease(main_arena);
+    return 1;
+  }
+
+  mach_vm_address_t assault_cube_base_module_address = 0;
+  char image_path_buffer[PATH_MAX];
+
+  const char *target_module_name = "AssaultCube";
+
+  for (uint32_t i = 0; i < image_info_array_size; i++) {
+    mach_vm_address_t path_address_in_target =
+        (mach_vm_address_t)local_image_infos[i].imageFilePath;
+
+    if (path_address_in_target == 0) {
+      continue;
+    }
+
+    // Zero out buffer before reading into it for safety
+    memset(image_path_buffer, 0, PATH_MAX);
+    mach_vm_size_t path_bytes_actually_read = 0;
+
+    // Read the path string from the target process.
+    // Read PATH_MAX-1 to leave space for a null terminator if the path is
+    // exactly PATH_MAX long.
+    result_code = read_target_memory(
+        assault_cube_task_port, path_address_in_target, PATH_MAX - 1,
+        image_path_buffer, &path_bytes_actually_read);
+
+    if (result_code == KERN_SUCCESS && path_bytes_actually_read > 0) {
+      if (strstr(image_path_buffer, target_module_name) != NULL) {
+        assault_cube_base_module_address =
+            (mach_vm_address_t)local_image_infos[i].imageLoadAddress;
+        printf("!!! Found Target Module !!!\n");
+        printf("    Path: %s\n", image_path_buffer);
+        printf("    Base Address: 0x%llx\n",
+               (unsigned long long)assault_cube_base_module_address);
+        break;
+      }
+    } else if (result_code != KERN_SUCCESS) {
+      fprintf(stderr,
+              "Warning: Failed to read image path for image %u at 0x%llx: %s\n",
+              i, (unsigned long long)path_address_in_target,
+              mach_error_string(result_code));
+    }
+  }
+
+  if (assault_cube_base_module_address == 0) {
+    fprintf(stderr, "Failed to find the base address for module: %s\n",
+            target_module_name);
     ArenaRelease(main_arena);
     return 1;
   }
