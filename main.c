@@ -68,19 +68,20 @@ int main(void) {
   printf("PID found: %d\n", process_id);
 
   mach_port_t assault_cube_port_task;
+  mach_port_t assault_cube_task_port;
   kern_return_t result_code;
 
-  result_code = task_port_find_by_pid(process_id, &assault_cube_port_task);
+  result_code = task_port_find_by_pid(process_id, &assault_cube_task_port);
   if (result_code != KERN_SUCCESS) {
     fprintf(stderr, "Failed to get task port: %s (kern_return_t: %d)\n",
             mach_error_string(result_code), result_code);
     return 1;
   } else {
-    printf("Successfully obtained task port: %u\n", assault_cube_port_task);
+    printf("Successfully obtained task port: %u\n", assault_cube_task_port);
   }
 
   task_dyld_info_data_t assault_cube_dyld_info;
-  result_code = task_dyld_info_find_by_task_port(assault_cube_port_task,
+  result_code = task_dyld_info_find_by_task_port(assault_cube_task_port,
                                                  &assault_cube_dyld_info);
   if (result_code != KERN_SUCCESS) {
     fprintf(stderr, "Failed to get dyld info: %s (kern_return_t: %d)\n",
@@ -94,6 +95,53 @@ int main(void) {
            (unsigned long long)assault_cube_dyld_info.all_image_info_size);
     printf("  all_image_info_format: %d (1 means 32-bit, 2 means 64-bit)\n",
            assault_cube_dyld_info.all_image_info_format);
+  }
+
+  // Now that we have the task_dyld_info struct, we are ready to read the
+  // actual image info data from Assault Cube's memory. We will store the
+  // read data in the following struct.
+  struct dyld_all_image_infos assault_cube_dyld_all_images_info;
+
+  result_code = read_target_memory(assault_cube_task_port,
+                                   assault_cube_dyld_info.all_image_info_addr,
+                                   assault_cube_dyld_info.all_image_info_size,
+                                   &assault_cube_dyld_all_images_info, NULL);
+  if (result_code != KERN_SUCCESS) {
+    fprintf(stderr,
+            "Failed to read dyld_all_image_infos from target: %s "
+            "(kern_return_t: %d)\n",
+            mach_error_string(result_code), result_code);
+    return 1;
+  } else {
+    printf("Successfully read dyld_all_image_infos structure from target "
+           "process!\n");
+
+    // Print some key fields from the struct dyld_all_image_infos
+    // The actual struct definition is in <mach-o/dyld_images.h>
+    printf("  Version: %u\n", assault_cube_dyld_all_images_info.version);
+    printf("  Number of loaded images (numImages): %u\n",
+           assault_cube_dyld_all_images_info.infoArrayCount);
+
+    // infoArray is a POINTER (an address) IN THE TARGET PROCESS'S MEMORY.
+    // It points to an array of dyld_image_info structures.
+    printf("  infoArray address in target: 0x%llx\n",
+           (unsigned long long)assault_cube_dyld_all_images_info.infoArray);
+
+    // dyldImageLoadAddress is the base address of dyld itself in the target
+    // process.
+    printf("  dyld image load address in target: 0x%llx\n",
+           (unsigned long long)
+               assault_cube_dyld_all_images_info.dyldImageLoadAddress);
+
+    // This is the address of the dyld_all_image_infos struct itself in the
+    // target process. It should match what
+    // assault_cube_dyld_info.all_image_info_addr reported.
+    if (assault_cube_dyld_all_images_info.dyldAllImageInfosAddress != NULL) {
+      printf("  Self-reported address of this dyld_all_image_infos struct in "
+             "target: 0x%llx\n",
+             (unsigned long long)
+                 assault_cube_dyld_all_images_info.dyldAllImageInfosAddress);
+    }
   }
 
   return 0;
