@@ -93,6 +93,34 @@ task_dyld_info_find_by_task_port(mach_port_t task_port,
                                  task_dyld_info_data_t *out_task_dyld_info);
 
 /**
+ * @brief Finds the base address of a loaded module by searching for a path
+ * fragment.
+ *
+ * Iterates through a list of loaded dyld_image_info structures, reads the
+ * file path for each image from the target task's memory, and compares it
+ * against the provided path fragment.
+ *
+ * @param target_task The Mach port of the target process.
+ * @param image_list A pointer to an array of dyld_image_info structures
+ * (previously read from the target process). This function does NOT take
+ * ownership of this memory.
+ * @param infoArrayCount The number of elements in the image_list array.
+ * @param image_path_fragment A substring to search for within the module file
+ * paths (e.g., "AssaultCube.app/Contents/MacOS/assaultcube"). The search is
+ * case-sensitive via strstr.
+ * @param out_module_base_address Pointer to a mach_vm_address_t where the base
+ * address of the first matching module will be stored.
+ * Initialized to 0 if not found.
+ * @return KERN_SUCCESS if a module matching the path fragment is found.
+ * KERN_FAILURE if the module is not found after checking all images.
+ * Other kern_return_t codes if reading an image path fails.
+ */
+kern_return_t find_module_base_address(
+    mach_port_t target_task, const struct dyld_image_info *image_list,
+    uint32_t infoArrayCount, const char *image_path_fragment,
+    mach_vm_address_t *out_module_base_address);
+
+/**
  * @brief Reads a specified number of bytes from the target process's memory.
  *
  * @param target_task The Mach port of the target process.
@@ -134,9 +162,9 @@ kern_return_t read_target_memory(mach_port_t target_task,
  * @return KERN_SUCCESS if the entire path was resolved successfully.
  * Otherwise, a Mach error code (e.g., from reading memory) or KERN_FAILURE.
  */
-kern_return_t
-resolve_pointer_path(mach_port_t target_task, mach_vm_address_t base_address,
-                     const intptr_t offsets[],
-                     int num_offsets, mach_vm_address_t *out_final_address);
+kern_return_t resolve_pointer_path(mach_port_t target_task,
+                                   mach_vm_address_t base_address,
+                                   const intptr_t offsets[], int num_offsets,
+                                   mach_vm_address_t *out_final_address);
 
 #endif // PROCESS_H

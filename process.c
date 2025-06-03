@@ -180,6 +180,55 @@ task_dyld_info_find_by_task_port(mach_port_t task_port,
   return kr;
 }
 
+kern_return_t find_module_base_address(
+    mach_port_t target_task, const struct dyld_image_info *image_list,
+    uint32_t infoArrayCount, const char *image_path_fragment,
+    mach_vm_address_t *out_module_base_address) {
+  assert(out_module_base_address != NULL);
+  assert(infoArrayCount > 0);
+  assert(image_list != NULL);
+  assert(image_path_fragment != NULL);
+  assert(MACH_PORT_VALID(target_task));
+
+  // used for temporary storage of image file paths
+  char image_path_buffer[PATH_MAX];
+  kern_return_t kr = KERN_SUCCESS;
+  *out_module_base_address = 0; // initialize to known state
+
+  for (uint32_t i = 0; i < infoArrayCount; i++) {
+    mach_vm_address_t path_address_in_target =
+        (mach_vm_address_t)image_list[i].imageFilePath;
+    if (path_address_in_target == 0) {
+      continue;
+    }
+    memset(image_path_buffer, 0, PATH_MAX);
+    kr = read_target_memory(
+        target_task, path_address_in_target,
+        // -1 to give space for null terminator if path is exactly PATH_MAX long
+        PATH_MAX - 1, image_path_buffer, NULL);
+
+    if (kr == KERN_SUCCESS) {
+      if (strstr(image_path_buffer, image_path_fragment) != NULL) {
+        *out_module_base_address =
+            (mach_vm_address_t)image_list[i].imageLoadAddress;
+        return kr;
+      }
+      // not a match...
+    } else {
+      fprintf(stderr,
+              "find_module_base_address: Warning: Failed to read image path "
+              "for image %u at 0x%llx: %s\n",
+              i, (unsigned long long)path_address_in_target,
+              mach_error_string(kr));
+    }
+    // continue iterating...
+  }
+
+  fprintf(stderr, "Failed to find the base address for module: %s\n",
+          image_path_fragment);
+  return KERN_FAILURE;
+}
+
 kern_return_t read_target_memory(mach_port_t target_task,
                                  mach_vm_address_t address, mach_vm_size_t size,
                                  void *buffer,
