@@ -9,7 +9,7 @@
 // assault cube health pointers.
 // [base() + 0x1CBD38] + 0x100 ❌
 // [base() + 0x1F5288] + 0x100
-// [base() + 0x1D5C48] + 0x100
+// [base() + 0x1D5C48] + 0x100 ✅
 //
 // 1. Get all running processes and find assault cube.
 // 2. Get access to modify the game (handle?) -> On MacOS: handle == task port
