@@ -36,4 +36,4 @@ $(TARGET): $(UNITY_FILE) $(COMPONENT_SOURCES) $(PROJECT_HEADERS)
 
 # Clean up build artifacts
 clean:
-	rm -f $(TARGET) # Only need to remove the final target
+	rm -f $(TARGET)
