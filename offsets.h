@@ -1,8 +1,14 @@
 #ifndef OFFSETS_H
 #define OFFSETS_H
 
-#define PLAYER_ENTITY_BASE_POINTER_OFFSET ((intptr_t)0x1D5C48)
+#define PE_BASE_POINTER_OFFSET ((intptr_t)0x1D5C48)
 
-#define PLAYER_ENTITY_OFFSET_HEALTH ((intptr_t)0x100)
+#define PE_OFFSET_IS_CROUCHING ((intptr_t)0x67)
+#define PE_OFFSET_HEALTH ((intptr_t)0x100)
+#define PE_OFFSET_ARMOR ((intptr_t)0x104)
+#define PE_OFFSET_SECONDARY_WEAPON_AMMO_RESERVE ((intptr_t)0x11C)
+#define PE_OFFSET_PRIMARY_WEAPON_AMMO_RESERVE ((intptr_t)0x12C)
+#define PE_OFFSET_SECONDARY_WEAPON_AMMO_LOADED ((intptr_t)0x140)
+#define PE_OFFSET_PRIMARY_WEAPON_AMMO_LOADED ((intptr_t)0x150)
 
 #endif // OFFSETS_H
