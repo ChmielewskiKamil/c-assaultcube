@@ -3,6 +3,7 @@
 #include "offsets.h"
 #include "process.h"
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,7 +27,10 @@ typedef struct {
 } MemberInfoStruct;
 
 MemberInfoStruct player_entity_map[] = {
+    {offsetof(PlayerEntity, is_crouching), TYPE_BOOL, "is crouching"},
     {offsetof(PlayerEntity, health), TYPE_INT32, "health"},
+    {offsetof(PlayerEntity, armor), TYPE_INT32, "armor"},
+    {offsetof(PlayerEntity, secondary_weapon_ammo_loaded), TYPE_INT32, "secondary ammo loaded"},
 };
 
 uint player_entity_map_count =
@@ -37,7 +41,7 @@ kern_return_t run_exploration_mode(AppContext *ctx) {
   assert(ctx->module_base_address != 0);
 
   mach_vm_address_t player_entity_address = 0;
-  intptr_t offsets[] = {PLAYER_ENTITY_BASE_POINTER_OFFSET, 0};
+  intptr_t offsets[] = {PE_BASE_POINTER_OFFSET, 0};
   uint32_t num_offsets = sizeof(offsets) / sizeof(offsets[0]);
   kern_return_t kr;
   kr = resolve_pointer_path(ctx->task_port, ctx->module_base_address, offsets,
@@ -93,6 +97,13 @@ kern_return_t run_exploration_mode(AppContext *ctx) {
             player_entity_map[j].offset < (i + 16)) {
           printf(" | %s: ", player_entity_map[j].name);
           switch (player_entity_map[j].type) {
+          case TYPE_BOOL: {
+            bool val;
+            memcpy(&val, hex_dump_current + player_entity_map[j].offset,
+                   sizeof(val));
+            printf(val ? "true" : "false");
+            break;
+          }
           case TYPE_INT16: {
             uint16_t val;
             memcpy(&val, hex_dump_current + player_entity_map[j].offset,
